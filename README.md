@@ -270,7 +270,11 @@ The `BONQMath` library offers essential mathematical functions with precise deci
    - Set up the correct Node.js version by running `nvm use` command in the root of the project. Make sure the project's `.nvmrc` file specifies the correct Node.js version.
 
 2. **Node Package Manager (NPM)**
+
    - Install project dependencies by running `npm install` command in the root of the project.
+
+3. **Environment Variables**
+   - Set up the environment variables as shown in the `.env.example` file. Copy the `.env.example` file and rename it to `.env`. Then, replace the placeholders with your actual values.
 
 ## Running Tests
 

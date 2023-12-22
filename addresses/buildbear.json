@@ -1,0 +1,11 @@
+{
+    "lastResortLiquidation": "0xF126bB7C214B1cDBde7f4296Da2Da5Fc99e34F27",
+    "auctionManager": "0xc3E52ebA21517c59BEdA53A1C760fdf2fb2C0025",
+    "vaultFactory": "0x050FAc481D26BDd477e121c04e5b059eDFd9F42f",
+    "liquidationRouter": "0xd14A6F345E44B8c061b63f6A79DA47F148082F54",
+    "a3aToken": "0x5D402E1Cf27769de037fDed4CdC1Aff2B0ce2208",
+    "mintableTokenOwner": "0xfd9f0EEa6a617C2D0Ab9656Fd6cf8aC5ED53Fd0C",
+    "stabilityPool": "0xaE5756207501459a9A72F2e4d06B219e146918dB",
+    "stableCoin": "0x25D50b4A9C4301ED18F832dD0ca002b3006D5ef0",
+    "a3aStaking": "0xED6aBF8eb45921E3ec462cD09e9DcDc13b4BA82A"
+}

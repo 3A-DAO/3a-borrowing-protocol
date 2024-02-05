@@ -37,6 +37,7 @@ contract ChainlinkPriceFeed is IPriceFeed, Constants {
      */
     function price() public view virtual override returns (uint256) {
         (, int256 _price, , uint256 _timestamp, ) = oracle.latestRoundData();
+        require(_price > 0, "e2637b _price must be a positive number");
         require(block.timestamp - _timestamp <= updateThreshold, "price-outdated");
         return (uint256(_price) * DECIMAL_PRECISION) / precision;
     }

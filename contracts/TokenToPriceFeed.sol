@@ -78,28 +78,26 @@ contract TokenToPriceFeed is Ownable, Constants, ITokenPriceFeed {
      * @param  _mcr Minimal Collateral Ratio of the token.
      * @param  _mlr Minimal Liquidation Ratio of the token.
      * @param  _borrowRate Borrow rate of the token.
-     * @param  _decimals Decimals of the token.
      */
     function setTokenPriceFeed(
         address _token,
         address _priceFeed,
         uint256 _mcr,
         uint256 _mlr,
-        uint256 _borrowRate,
-        uint256 _decimals
+        uint256 _borrowRate
     ) public override onlyOwner {
         require(_mcr >= 100, "MCR < 100");
         require(_mlr >= 100 && _mlr <= _mcr, "MLR < 100 or MLR > MCR");
-        require(_decimals > 0, "decimals = 0");
         require(_borrowRate < 10 ether, "borrowRate >= 10%");
+        IERC20Metadata erc20 = IERC20Metadata(_token);
+        uint256 _decimals = erc20.decimals();
+        require(_decimals > 0 || _decimals <= 18, "not-valid-decimals");
 
         TokenInfo memory token = tokens[_token];
         token.priceFeed = _priceFeed;
-        IERC20Metadata erc20 = IERC20Metadata(_token);
         token.mcr = (DECIMAL_PRECISION * _mcr) / 100;
         token.mlr = (DECIMAL_PRECISION * _mlr) / 100;
         token.borrowRate = _borrowRate;
-        token.decimals = _decimals;
         emit NewTokenPriceFeed(
             _token,
             _priceFeed,
@@ -108,7 +106,7 @@ contract TokenToPriceFeed is Ownable, Constants, ITokenPriceFeed {
             token.mcr,
             token.mlr,
             token.borrowRate,
-            token.decimals
+            _decimals
         );
         tokens[_token] = token;
     }

@@ -24,7 +24,7 @@ interface ITokenPriceFeed is IOwnable {
 
     function borrowRate(address _token) external view returns (uint256);
 
-    function setTokenPriceFeed(address _token, address _priceFeed, uint256 _mcr, uint256 _mlr, uint256 _borrowRate, uint256 _decimals) external;
+    function setTokenPriceFeed(address _token, address _priceFeed, uint256 _mcr, uint256 _mlr, uint256 _borrowRate) external;
 
     event NewTokenPriceFeed(
         address _token,

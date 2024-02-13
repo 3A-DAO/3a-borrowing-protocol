@@ -259,7 +259,7 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
         for (uint256 i = 0; i < _collateralsLength; i++) {
             IERC20 collateralToken = IERC20(_collaterals[i]);
             collateralToken.safeApprove(address(_lastResortLiquidation), 0);
-            collateralToken.safeApprove(address(_lastResortLiquidation), type(uint256).max);
+            collateralToken.safeApprove(address(_lastResortLiquidation), _collateralAmounts[i]);
             _lastResortLiquidation.addCollateral(address(collateralToken), _collateralAmounts[i]);
         }
     }

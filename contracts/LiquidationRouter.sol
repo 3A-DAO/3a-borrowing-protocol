@@ -148,10 +148,10 @@ contract LiquidationRouter is Ownable, ReentrancyGuard {
         IERC20(_collateral).safeTransferFrom(msg.sender, address(this), _amount);
 
         IERC20(_collateral).safeApprove(stabilityPool, 0);
-        IERC20(_collateral).safeApprove(stabilityPool, type(uint256).max);
+        IERC20(_collateral).safeApprove(stabilityPool, _amount);
 
         IERC20(_collateral).safeApprove(auctionManager, 0);
-        IERC20(_collateral).safeApprove(auctionManager, type(uint256).max);
+        IERC20(_collateral).safeApprove(auctionManager, _amount);
 
         collateralSet.add(_collateral);
         collateral[_collateral] += _amount;

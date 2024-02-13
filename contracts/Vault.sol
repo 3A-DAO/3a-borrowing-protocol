@@ -415,7 +415,7 @@ contract Vault is Context, Constants {
             collateral[_collateral] = 0;
 
             IERC20(_collateral).safeApprove(IVaultFactory(factory).liquidationRouter(), 0);
-            IERC20(_collateral).safeApprove(IVaultFactory(factory).liquidationRouter(), type(uint256).max);
+            IERC20(_collateral).safeApprove(IVaultFactory(factory).liquidationRouter(), _collateralAmount);
 
             router.addSeizedCollateral(_collateral, _collateralAmount);
         }

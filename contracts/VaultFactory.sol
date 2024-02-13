@@ -191,7 +191,7 @@ contract VaultFactory is ReentrancyGuard, VaultFactoryConfig, VaultFactoryList {
         collateral[nativeWrapped] -= _amount;
 
         IWETH(nativeWrapped).withdraw(_amount);
-        payable(_to).transfer(_amount);
+        _to.call{value: _amount};
     }
 
     /**

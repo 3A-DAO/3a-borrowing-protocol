@@ -22,5 +22,6 @@ contract Constants {
 
     // Maximum borrowing and redemption rates
     uint256 public constant MAX_BORROWING_RATE = (DECIMAL_PRECISION * 5) / 100; // Represents 5%
-    uint256 public constant MAX_REDEMPTION_RATE = (DECIMAL_PRECISION * 1) / 100; // Represents 1%
+    uint256 public constant MAX_REDEMPTION_RATE =
+        (DECIMAL_PRECISION * 10) / 100; // Represents 10%
 }

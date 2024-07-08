@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.4;
 
-import "./IOwnable.sol";
+import './IOwnable.sol';
 
 interface ITokenPriceFeed is IOwnable {
     struct TokenInfo {
@@ -24,7 +24,14 @@ interface ITokenPriceFeed is IOwnable {
 
     function borrowRate(address _token) external view returns (uint256);
 
-    function setTokenPriceFeed(address _token, address _priceFeed, uint256 _mcr, uint256 _mlr, uint256 _borrowRate) external;
+    function setTokenPriceFeed(
+        address _token,
+        address _priceFeed,
+        uint256 _mcr,
+        uint256 _mlr,
+        uint256 _borrowRate,
+        uint256 /* _decimals */
+    ) external;
 
     event NewTokenPriceFeed(
         address _token,

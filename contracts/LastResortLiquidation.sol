@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
-import "./interfaces/IVault.sol";
-import "./interfaces/IVaultFactory.sol";
-import "./interfaces/IStabilityPool.sol";
-import "./interfaces/IAuctionManager.sol";
-import "./interfaces/IMintableToken.sol";
-import "./interfaces/ILiquidationRouter.sol";
+import './interfaces/IVault.sol';
+import './interfaces/IVaultFactory.sol';
+import './interfaces/IStabilityPool.sol';
+import './interfaces/IAuctionManager.sol';
+import './interfaces/IMintableToken.sol';
+import './interfaces/ILiquidationRouter.sol';
 
 /**
  * @title LastResortLiquidation
@@ -35,7 +35,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
     uint256 public badDebt;
 
     modifier onlyAllowed() {
-        require(allowedSet.contains(msg.sender), "not-allowed");
+        require(allowedSet.contains(msg.sender), 'not-allowed');
         _;
     }
 
@@ -44,7 +44,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _allowed The address to add to the allowed set.
      */
     function addAllowed(address _allowed) external onlyOwner {
-        require(_allowed != address(0x0), "allowed-is-0");
+        require(_allowed != address(0x0), 'allowed-is-0');
         allowedSet.add(_allowed);
     }
 
@@ -53,7 +53,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _allowed The address to remove from the allowed set.
      */
     function removeAllowed(address _allowed) external onlyOwner {
-        require(_allowed != address(0x0), "allowed-is-0");
+        require(_allowed != address(0x0), 'allowed-is-0');
         allowedSet.remove(_allowed);
     }
 
@@ -96,7 +96,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _vaultFactory Address of the vault factory.
      */
     function setVaultFactory(address _vaultFactory) external onlyOwner {
-        require(_vaultFactory != address(0x0), "vault-factory-is-0");
+        require(_vaultFactory != address(0x0), 'vault-factory-is-0');
         vaultFactory = _vaultFactory;
         emit VaultFactoryUpdated(_vaultFactory);
     }
@@ -106,12 +106,19 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _collateral The address of the collateral token.
      * @param _amount The amount of collateral to add.
      */
-    function addCollateral(address _collateral, uint256 _amount) external onlyAllowed {
-        require(_collateral != address(0x0), "collateral-is-0");
-        require(_amount > 0, "amount-is-0");
+    function addCollateral(
+        address _collateral,
+        uint256 _amount
+    ) external onlyAllowed {
+        require(_collateral != address(0x0), 'collateral-is-0');
+        require(_amount > 0, 'amount-is-0');
 
         collateralSet.add(_collateral);
-        IERC20(_collateral).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20(_collateral).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _amount
+        );
 
         collateral[_collateral] += _amount;
     }
@@ -122,9 +129,13 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _amount The amount of collateral to withdraw.
      * @param _to The address to receive the withdrawn collateral.
      */
-    function withdrawCollateral(address _collateral, uint256 _amount, address _to) external onlyOwner {
-        require(_collateral != address(0x0), "collateral-is-0");
-        require(_amount > 0, "amount-is-0");
+    function withdrawCollateral(
+        address _collateral,
+        uint256 _amount,
+        address _to
+    ) external onlyOwner {
+        require(_collateral != address(0x0), 'collateral-is-0');
+        require(_amount > 0, 'amount-is-0');
 
         collateral[_collateral] -= _amount;
 
@@ -138,7 +149,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _amount The amount of bad debt to add.
      */
     function addBadDebt(uint256 _amount) external onlyAllowed {
-        require(_amount > 0, "amount-is-0");
+        require(_amount > 0, 'amount-is-0');
         badDebt += _amount;
     }
 
@@ -147,10 +158,12 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _amount The amount of stable tokens to burn.
      */
     function repayBadDebt(uint256 _amount) external onlyOwner {
-        require(_amount > 0, "amount-is-0");
-        require(_amount <= badDebt, "amount-too-high");
+        require(_amount > 0, 'amount-is-0');
+        require(_amount <= badDebt, 'amount-too-high');
 
-        IMintableToken _stable = IMintableToken(IVaultFactory(vaultFactory).stable());
+        IMintableToken _stable = IMintableToken(
+            IVaultFactory(vaultFactory).stable()
+        );
         _stable.safeTransferFrom(msg.sender, address(this), _amount);
         _stable.burn(_amount);
 
@@ -162,13 +175,18 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @param _vault The address of the vault to receive the bad debt.
      * @param _amount The amount of bad debt to distribute.
      */
-    function distributeBadDebt(address _vault, uint256 _amount) external onlyOwner {
-        require(_vault != address(0x0), "vault-is-0");
-        require(_amount > 0, "amount-is-0");
-        require(_amount <= badDebt, "amount-too-high");
+    function distributeBadDebt(
+        address _vault,
+        uint256 _amount
+    ) external onlyOwner {
+        require(_vault != address(0x0), 'vault-is-0');
+        require(_amount > 0, 'amount-is-0');
+        require(_amount <= badDebt, 'amount-too-high');
         badDebt -= _amount;
         IVaultFactory _vaultFactory = IVaultFactory(vaultFactory);
-        ILiquidationRouter _liquidationRouter = ILiquidationRouter(_vaultFactory.liquidationRouter());
+        ILiquidationRouter _liquidationRouter = ILiquidationRouter(
+            _vaultFactory.liquidationRouter()
+        );
         _liquidationRouter.distributeBadDebt(_vault, _amount);
     }
 }

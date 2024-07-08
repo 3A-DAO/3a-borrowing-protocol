@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import '@openzeppelin/contracts/access/Ownable.sol';
 // import openzeppelin reentrancy guard
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./utils/constants.sol";
-import "./utils/BONQMath.sol";
-import "./interfaces/IVaultFactory.sol";
-import "./interfaces/IMintableToken.sol";
-import "./interfaces/IVault.sol";
-import "./interfaces/ILiquidationRouter.sol";
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import './utils/constants.sol';
+import './interfaces/IVaultFactory.sol';
+import './interfaces/IMintableToken.sol';
+import './interfaces/IVault.sol';
+import './interfaces/ILiquidationRouter.sol';
 
 /**
  * @title StabilityPool
@@ -18,7 +17,6 @@ import "./interfaces/ILiquidationRouter.sol";
  * @notice is used to liquidate vaults and reward depositors with collateral redeemed
  */
 contract StabilityPool is Ownable, ReentrancyGuard, Constants {
-    using BONQMath for uint256;
     using SafeERC20 for IERC20;
 
     // A structure defining token addresses and their respective 'Stable' values
@@ -86,7 +84,8 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      * - The inner mapping records the sum S at different scales
      * - The outer mapping records the (scale => sum) mappings, for different epochs.
      */
-    mapping(uint128 => mapping(uint128 => TokenToS[])) public epochToScaleToTokenToSum;
+    mapping(uint128 => mapping(uint128 => TokenToS[]))
+        public epochToScaleToTokenToSum;
 
     /*
      * Similarly, the sum 'G' is used to calculate A3A gains. During it's lifetime, each deposit d_t earns a A3A gain of
@@ -108,12 +107,26 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
     event A3APerMinuteUpdated(uint256 _newAmount);
     event TotalA3ARewardsUpdated(uint256 _newAmount);
     // solhint-disable-next-line event-name-camelcase
-    event CollateralRewardRedeemed(address _contributor, address _tokenAddress, uint256 _amount);
-    event DepositSnapshotUpdated(address indexed _depositor, uint256 _P, uint256 _G, uint256 _newDepositValue);
+    event CollateralRewardRedeemed(
+        address _contributor,
+        address _tokenAddress,
+        uint256 _amount
+    );
+    event DepositSnapshotUpdated(
+        address indexed _depositor,
+        uint256 _P,
+        uint256 _G,
+        uint256 _newDepositValue
+    );
 
     /* solhint-disable event-name-camelcase */
     event P_Updated(uint256 _P);
-    event S_Updated(address _tokenAddress, uint256 _S, uint128 _epoch, uint128 _scale);
+    event S_Updated(
+        address _tokenAddress,
+        uint256 _S,
+        uint128 _epoch,
+        uint128 _scale
+    );
     event G_Updated(uint256 _G, uint128 _epoch, uint128 _scale);
     /* solhint-disable event-name-camelcase */
     event EpochUpdated(uint128 _currentEpoch);
@@ -126,8 +139,8 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      * @param _a3aToken Address of the A3A token to be used within the Vault system.
      */
     constructor(address _factory, address _a3aToken) {
-        require(_factory != address(0x0), "factory-is-0");
-        require(_a3aToken != address(0x0), "a3a-is-0");
+        require(_factory != address(0x0), 'factory-is-0');
+        require(_a3aToken != address(0x0), 'a3a-is-0');
         factory = IVaultFactory(_factory);
         stableCoin = IMintableToken(address(IVaultFactory(_factory).stable()));
         a3aToken = IERC20(_a3aToken);
@@ -138,7 +151,7 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
     /// @param  _amount amount to deposit
     function deposit(uint256 _amount) public nonReentrant {
         // address depositor = msg.sender;
-        require(_amount > 0, "amount-is-0");
+        require(_amount > 0, 'amount-is-0');
 
         stableCoin.transferFrom(msg.sender, address(this), _amount);
         uint256 initialDeposit = deposits[msg.sender];
@@ -146,7 +159,10 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
 
         Snapshots memory snapshots = depositSnapshots[msg.sender];
 
-        uint256 compoundedDeposit = _getCompoundedDepositFromSnapshots(initialDeposit, snapshots);
+        uint256 compoundedDeposit = _getCompoundedDepositFromSnapshots(
+            initialDeposit,
+            snapshots
+        );
         // uint256 newValue = compoundedDeposit + _amount;
         uint256 newTotalDeposit = totalDeposit + _amount;
         totalDeposit = newTotalDeposit;
@@ -162,15 +178,19 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
     /// @param  _amount amount to withdraw
     function withdraw(uint256 _amount) public nonReentrant {
         uint256 contributorDeposit = deposits[msg.sender];
-        require(_amount > 0, "amount-is-0");
-        require(contributorDeposit > 0, "deposit-is-0");
+        require(_amount > 0, 'amount-is-0');
+        require(contributorDeposit > 0, 'deposit-is-0');
         _redeemReward();
 
         Snapshots memory snapshots = depositSnapshots[msg.sender];
 
-        uint256 compoundedDeposit = _getCompoundedDepositFromSnapshots(contributorDeposit, snapshots);
-        uint256 calculatedAmount = compoundedDeposit.min(_amount);
-
+        uint256 compoundedDeposit = _getCompoundedDepositFromSnapshots(
+            contributorDeposit,
+            snapshots
+        );
+        uint256 calculatedAmount = compoundedDeposit > _amount
+            ? _amount
+            : compoundedDeposit;
         uint256 newValue = compoundedDeposit - calculatedAmount;
 
         totalDeposit = totalDeposit - calculatedAmount;
@@ -188,13 +208,16 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
         Snapshots memory snapshots = depositSnapshots[msg.sender];
         uint256 contributorDeposit = deposits[msg.sender];
 
-        uint256 compoundedDeposit = _getCompoundedDepositFromSnapshots(contributorDeposit, snapshots);
+        uint256 compoundedDeposit = _getCompoundedDepositFromSnapshots(
+            contributorDeposit,
+            snapshots
+        );
         _redeemReward();
         _updateDepositAndSnapshots(msg.sender, compoundedDeposit);
     }
 
     function setVaultFactory(address _factory) external onlyOwner {
-        require(_factory != address(0x0), "factory-is-0");
+        require(_factory != address(0x0), 'factory-is-0');
         factory = IVaultFactory(_factory);
     }
 
@@ -203,10 +226,15 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
     /// @dev fail because of the lowering of the stablecoin balance
     /// @notice must be called by the valid vault
     function liquidate() external {
-        require(msg.sender == factory.liquidationRouter(), "not-liquidation-router");
+        require(
+            msg.sender == factory.liquidationRouter(),
+            'not-liquidation-router'
+        );
         IVaultFactory factory_cached = factory;
 
-        ILiquidationRouter _liquidationRouter = ILiquidationRouter(factory_cached.liquidationRouter());
+        ILiquidationRouter _liquidationRouter = ILiquidationRouter(
+            factory_cached.liquidationRouter()
+        );
         uint256 _underWaterDebt = _liquidationRouter.underWaterDebt();
         address[] memory _collaterals = _liquidationRouter.collaterals();
         uint256 _collateralCount = _collaterals.length;
@@ -215,17 +243,30 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
 
         for (uint256 i; i < _collateralCount; i++) {
             IERC20 _collateralToken = IERC20(_collaterals[i]);
-            uint256 _collateralAmount = _liquidationRouter.collateral(address(_collateralToken));
-            _collateralToken.safeTransferFrom(address(_liquidationRouter), address(this), _collateralAmount);
-
-            (uint256 collateralGainPerUnitStaked, uint256 stableCoinLossPerUnitStaked) = _computeRewardsPerUnitStaked(
-                address(_collateralToken),
-                _collateralAmount,
-                _underWaterDebt,
-                totalStableCoin
+            uint256 _collateralAmount = _liquidationRouter.collateral(
+                address(_collateralToken)
+            );
+            _collateralToken.safeTransferFrom(
+                address(_liquidationRouter),
+                address(this),
+                _collateralAmount
             );
 
-            _updateRewardSumAndProduct(address(_collateralToken), collateralGainPerUnitStaked, stableCoinLossPerUnitStaked);
+            (
+                uint256 collateralGainPerUnitStaked,
+                uint256 stableCoinLossPerUnitStaked
+            ) = _computeRewardsPerUnitStaked(
+                    address(_collateralToken),
+                    _collateralAmount,
+                    _underWaterDebt,
+                    totalStableCoin
+                );
+
+            _updateRewardSumAndProduct(
+                address(_collateralToken),
+                collateralGainPerUnitStaked,
+                stableCoinLossPerUnitStaked
+            );
         }
 
         _triggerA3Adistribution();
@@ -241,7 +282,9 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      * @dev Gets the current withdrawable deposit of a specified staker.
      * @param staker The address of the staker
      * @return uint256 The withdrawable deposit amount
-     */ function getWithdrawableDeposit(address staker) public view returns (uint256) {
+     */ function getWithdrawableDeposit(
+        address staker
+    ) public view returns (uint256) {
         uint256 initialDeposit = deposits[staker];
         Snapshots memory snapshots = depositSnapshots[staker];
         return _getCompoundedDepositFromSnapshots(initialDeposit, snapshots);
@@ -253,14 +296,19 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      * @param _depositor The address of the depositor
      * @return uint256 The collateral reward amount
      */
-    function getCollateralReward(address _token, address _depositor) external view returns (uint256) {
+    function getCollateralReward(
+        address _token,
+        address _depositor
+    ) external view returns (uint256) {
         Snapshots memory _snapshots = depositSnapshots[_depositor];
         uint256 _initialDeposit = deposits[_depositor];
 
         uint128 epochSnapshot = _snapshots.epoch;
         uint128 scaleSnapshot = _snapshots.scale;
 
-        TokenToS[] memory tokensToSum_cached = epochToScaleToTokenToSum[epochSnapshot][scaleSnapshot];
+        TokenToS[] memory tokensToSum_cached = epochToScaleToTokenToSum[
+            epochSnapshot
+        ][scaleSnapshot];
         uint256 tokenArrayLength = tokensToSum_cached.length;
 
         TokenToS memory cachedS;
@@ -280,7 +328,9 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
                 break;
             }
         }
-        TokenToS[] memory nextTokensToSum_cached = epochToScaleToTokenToSum[epochSnapshot][scaleSnapshot + 1];
+        TokenToS[] memory nextTokensToSum_cached = epochToScaleToTokenToSum[
+            epochSnapshot
+        ][scaleSnapshot + 1];
         uint256 nextScaleS;
         for (uint128 i = 0; i < nextTokensToSum_cached.length; i++) {
             TokenToS memory nextScaleTokenToS = nextTokensToSum_cached[i];
@@ -308,19 +358,27 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      * @param _depositor The address of the user
      * @return uint256 The A3A reward amount
      */
-    function getDepositorA3AGain(address _depositor) external view returns (uint256) {
+    function getDepositorA3AGain(
+        address _depositor
+    ) external view returns (uint256) {
         uint256 totalA3ARewardsLeft_cached = totalA3ARewardsLeft;
         uint256 totalStableCoin = totalDeposit;
-        if (totalA3ARewardsLeft_cached == 0 || a3aPerMinute == 0 || totalStableCoin == 0) {
+        if (
+            totalA3ARewardsLeft_cached == 0 ||
+            a3aPerMinute == 0 ||
+            totalStableCoin == 0
+        ) {
             return 0;
         }
 
-        uint256 _a3aIssuance = a3aPerMinute * ((block.timestamp - latestA3ARewardTime) / SECONDS_IN_ONE_MINUTE);
+        uint256 _a3aIssuance = a3aPerMinute *
+            ((block.timestamp - latestA3ARewardTime) / SECONDS_IN_ONE_MINUTE);
         if (totalA3ARewardsLeft_cached < _a3aIssuance) {
             _a3aIssuance = totalA3ARewardsLeft_cached;
         }
 
-        uint256 a3aGain = (_a3aIssuance * DECIMAL_PRECISION + lastA3AError) / totalStableCoin;
+        uint256 a3aGain = (_a3aIssuance * DECIMAL_PRECISION + lastA3AError) /
+            totalStableCoin;
         uint256 marginalA3AGain = a3aGain * P;
 
         return _getDepositorA3AGain(_depositor, marginalA3AGain);
@@ -361,7 +419,10 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      */
     function _redeemCollateralReward() internal {
         address depositor = msg.sender;
-        TokenToUint256[] memory depositorCollateralGains = _getDepositorCollateralGains(depositor);
+        TokenToUint256[]
+            memory depositorCollateralGains = _getDepositorCollateralGains(
+                depositor
+            );
         _sendCollateralRewardsToDepositor(depositorCollateralGains);
     }
 
@@ -380,7 +441,10 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      * @param _depositor The address of the depositor.
      * @param _newValue The new deposit value.
      */
-    function _updateDepositAndSnapshots(address _depositor, uint256 _newValue) private {
+    function _updateDepositAndSnapshots(
+        address _depositor,
+        uint256 _newValue
+    ) private {
         deposits[_depositor] = _newValue;
         if (_newValue == 0) {
             delete depositSnapshots[_depositor];
@@ -389,11 +453,13 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
         }
         uint128 cachedEpoch = currentEpoch;
         uint128 cachedScale = currentScale;
-        TokenToS[] storage cachedTokenToSArray = epochToScaleToTokenToSum[cachedEpoch][cachedScale]; // TODO: maybe remove and read twice?
+        TokenToS[] storage cachedTokenToSArray = epochToScaleToTokenToSum[
+            cachedEpoch
+        ][cachedScale];
         uint256 cachedP = P;
         uint256 cachedG = epochToScaleToG[cachedEpoch][cachedScale];
 
-        depositSnapshots[_depositor].tokenToSArray = cachedTokenToSArray; // TODO
+        depositSnapshots[_depositor].tokenToSArray = cachedTokenToSArray;
         depositSnapshots[_depositor].P = cachedP;
         depositSnapshots[_depositor].G = cachedG;
         depositSnapshots[_depositor].scale = cachedScale;
@@ -420,9 +486,13 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
         uint256 currentS;
         uint256 currentSIndex;
         bool _found;
-        TokenToS[] memory currentTokenToSArray = epochToScaleToTokenToSum[currentEpochCached][currentScaleCached];
+        TokenToS[] memory currentTokenToSArray = epochToScaleToTokenToSum[
+            currentEpochCached
+        ][currentScaleCached];
         for (uint128 i = 0; i < currentTokenToSArray.length; i++) {
-            if (currentTokenToSArray[i].tokenAddress == _collateralTokenAddress) {
+            if (
+                currentTokenToSArray[i].tokenAddress == _collateralTokenAddress
+            ) {
                 currentS = currentTokenToSArray[i].S_value;
                 currentSIndex = i;
                 _found = true;
@@ -441,24 +511,39 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
             TokenToS memory tokenToS;
             tokenToS.S_value = newS;
             tokenToS.tokenAddress = _collateralTokenAddress;
-            epochToScaleToTokenToSum[currentEpochCached][currentScaleCached].push() = tokenToS;
+            epochToScaleToTokenToSum[currentEpochCached][currentScaleCached]
+                .push() = tokenToS;
         } else {
-            epochToScaleToTokenToSum[currentEpochCached][currentScaleCached][currentSIndex].S_value = newS;
+            epochToScaleToTokenToSum[currentEpochCached][currentScaleCached][
+                currentSIndex
+            ].S_value = newS;
         }
-        emit S_Updated(_collateralTokenAddress, newS, currentEpochCached, currentScaleCached);
+        emit S_Updated(
+            _collateralTokenAddress,
+            newS,
+            currentEpochCached,
+            currentScaleCached
+        );
         _updateP(_stableCoinLossPerUnitStaked, true);
     }
 
-    function _updateP(uint256 _stableCoinChangePerUnitStaked, bool loss) internal {
+    function _updateP(
+        uint256 _stableCoinChangePerUnitStaked,
+        bool loss
+    ) internal {
         /*
          * The newProductFactor is the factor by which to change all deposits, due to the depletion of Stability Pool StableCoin in the liquidation.
          * We make the product factor 0 if there was a pool-emptying. Otherwise, it is (1 - StableCoinLossPerUnitStaked)
          */
         uint256 newProductFactor;
         if (loss) {
-            newProductFactor = uint256(DECIMAL_PRECISION - _stableCoinChangePerUnitStaked);
+            newProductFactor = uint256(
+                DECIMAL_PRECISION - _stableCoinChangePerUnitStaked
+            );
         } else {
-            newProductFactor = uint256(DECIMAL_PRECISION + _stableCoinChangePerUnitStaked);
+            newProductFactor = uint256(
+                DECIMAL_PRECISION + _stableCoinChangePerUnitStaked
+            );
         }
         uint256 currentP = P;
         uint256 newP;
@@ -471,8 +556,12 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
             newP = DECIMAL_PRECISION;
 
             // If multiplying P by a non-zero product factor would reduce P below the scale boundary, increment the scale
-        } else if ((currentP * newProductFactor) / DECIMAL_PRECISION < SCALE_FACTOR) {
-            newP = (currentP * newProductFactor * SCALE_FACTOR) / DECIMAL_PRECISION;
+        } else if (
+            (currentP * newProductFactor) / DECIMAL_PRECISION < SCALE_FACTOR
+        ) {
+            newP =
+                (currentP * newProductFactor * SCALE_FACTOR) /
+                DECIMAL_PRECISION;
             currentScale += 1;
             emit ScaleUpdated(currentScale);
         } else {
@@ -501,16 +590,27 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
         }
 
         uint256 a3aPerUnitStaked;
-        a3aPerUnitStaked = _computeA3APerUnitStaked(_a3aIssuance, totalStableCoin);
+        a3aPerUnitStaked = _computeA3APerUnitStaked(
+            _a3aIssuance,
+            totalStableCoin
+        );
 
         uint256 marginalA3AGain = a3aPerUnitStaked * P;
         uint128 currentEpoch_cached = currentEpoch;
         uint128 currentScale_cached = currentScale;
 
-        uint256 newEpochToScaleToG = epochToScaleToG[currentEpoch_cached][currentScale_cached] + marginalA3AGain;
-        epochToScaleToG[currentEpoch_cached][currentScale_cached] = newEpochToScaleToG;
+        uint256 newEpochToScaleToG = epochToScaleToG[currentEpoch_cached][
+            currentScale_cached
+        ] + marginalA3AGain;
+        epochToScaleToG[currentEpoch_cached][
+            currentScale_cached
+        ] = newEpochToScaleToG;
 
-        emit G_Updated(newEpochToScaleToG, currentEpoch_cached, currentScale_cached);
+        emit G_Updated(
+            newEpochToScaleToG,
+            currentEpoch_cached,
+            currentScale_cached
+        );
     }
 
     /**
@@ -518,7 +618,9 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
      * @param _depositor The address of the depositor
      * @return TokenToUint256[] An array containing collateral gain information
      */
-    function _getDepositorCollateralGains(address _depositor) internal view returns (TokenToUint256[] memory) {
+    function _getDepositorCollateralGains(
+        address _depositor
+    ) internal view returns (TokenToUint256[] memory) {
         uint256 initialDeposit = deposits[_depositor];
         if (initialDeposit == 0) {
             TokenToUint256[] memory x;
@@ -527,7 +629,11 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
 
         Snapshots memory snapshots = depositSnapshots[_depositor];
 
-        TokenToUint256[] memory gainPerCollateralArray = _getCollateralGainsArrayFromSnapshots(initialDeposit, snapshots);
+        TokenToUint256[]
+            memory gainPerCollateralArray = _getCollateralGainsArrayFromSnapshots(
+                initialDeposit,
+                snapshots
+            );
         return gainPerCollateralArray;
     }
 
@@ -543,9 +649,13 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
          */
         uint128 epochSnapshot = _snapshots.epoch;
         uint128 scaleSnapshot = _snapshots.scale;
-        TokenToS[] memory tokensToSum_cached = epochToScaleToTokenToSum[epochSnapshot][scaleSnapshot];
+        TokenToS[] memory tokensToSum_cached = epochToScaleToTokenToSum[
+            epochSnapshot
+        ][scaleSnapshot];
         uint256 tokenArrayLength = tokensToSum_cached.length;
-        TokenToUint256[] memory CollateralGainsArray = new TokenToUint256[](tokenArrayLength);
+        TokenToUint256[] memory CollateralGainsArray = new TokenToUint256[](
+            tokenArrayLength
+        );
         for (uint128 i = 0; i < tokenArrayLength; i++) {
             TokenToS memory S = tokensToSum_cached[i];
             uint256 relatedS_snapshot;
@@ -556,7 +666,9 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
                     break;
                 }
             }
-            TokenToS[] memory nextTokensToSum_cached = epochToScaleToTokenToSum[epochSnapshot][scaleSnapshot + 1];
+            TokenToS[] memory nextTokensToSum_cached = epochToScaleToTokenToSum[
+                epochSnapshot
+            ][scaleSnapshot + 1];
             uint256 nextScaleS;
             for (uint128 j = 0; j < nextTokensToSum_cached.length; j++) {
                 TokenToS memory nextScaleTokenToS = nextTokensToSum_cached[j];
@@ -589,12 +701,18 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
     ) internal pure returns (uint256) {
         uint256 firstPortion = S - S_Snapshot;
         uint256 secondPortion = nextScaleS / SCALE_FACTOR;
-        uint256 collateralGain = (initialDeposit * (firstPortion + secondPortion)) / P_Snapshot / DECIMAL_PRECISION;
+        uint256 collateralGain = (initialDeposit *
+            (firstPortion + secondPortion)) /
+            P_Snapshot /
+            DECIMAL_PRECISION;
 
         return collateralGain;
     }
 
-    function _getDepositorA3AGain(address _depositor, uint256 _marginalA3AGain) internal view returns (uint256) {
+    function _getDepositorA3AGain(
+        address _depositor,
+        uint256 _marginalA3AGain
+    ) internal view returns (uint256) {
         uint256 initialDeposit = deposits[_depositor];
         if (initialDeposit == 0) {
             return 0;
@@ -605,15 +723,27 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
          * If it does, the second portion of the A3A gain is scaled by 1e9.
          * If the gain spans no scale change, the second portion will be 0.
          */
-        uint256 firstEpochPortion = epochToScaleToG[_snapshots.epoch][_snapshots.scale];
-        uint256 secondEpochPortion = epochToScaleToG[_snapshots.epoch][_snapshots.scale + 1];
+        uint256 firstEpochPortion = epochToScaleToG[_snapshots.epoch][
+            _snapshots.scale
+        ];
+        uint256 secondEpochPortion = epochToScaleToG[_snapshots.epoch][
+            _snapshots.scale + 1
+        ];
         if (_snapshots.epoch == currentEpoch) {
-            if (_snapshots.scale == currentScale) firstEpochPortion += _marginalA3AGain;
-            if (_snapshots.scale + 1 == currentScale) secondEpochPortion += _marginalA3AGain;
+            if (_snapshots.scale == currentScale)
+                firstEpochPortion += _marginalA3AGain;
+            if (_snapshots.scale + 1 == currentScale)
+                secondEpochPortion += _marginalA3AGain;
         }
-        uint256 gainPortions = firstEpochPortion - _snapshots.G + secondEpochPortion / SCALE_FACTOR;
+        uint256 gainPortions = firstEpochPortion -
+            _snapshots.G +
+            secondEpochPortion /
+            SCALE_FACTOR;
 
-        return (initialDeposit * (gainPortions)) / _snapshots.P / DECIMAL_PRECISION;
+        return
+            (initialDeposit * (gainPortions)) /
+            _snapshots.P /
+            DECIMAL_PRECISION;
     }
 
     /// @dev gets compounded deposit of the user
@@ -635,11 +765,16 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
          * account for it. If more than one scale change was made, then the stake has decreased by a factor of
          * at least 1e-9 -- so return 0.
          */
-        uint256 calculatedSnapshotP = snapshot_P == 0 ? DECIMAL_PRECISION : snapshot_P;
+        uint256 calculatedSnapshotP = snapshot_P == 0
+            ? DECIMAL_PRECISION
+            : snapshot_P;
         if (scaleDiff == 0) {
             compoundedStake = (_initialStake * P) / calculatedSnapshotP;
         } else if (scaleDiff == 1) {
-            compoundedStake = (_initialStake * P) / calculatedSnapshotP / SCALE_FACTOR;
+            compoundedStake =
+                (_initialStake * P) /
+                calculatedSnapshotP /
+                SCALE_FACTOR;
         } else {
             // if scaleDiff >= 2
             compoundedStake = 0;
@@ -668,7 +803,13 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
         uint256 _collToAdd,
         uint256 _debtToOffset,
         uint256 _totalStableCoinDeposits
-    ) internal returns (uint256 collateralGainPerUnitStaked, uint256 stableCoinLossPerUnitStaked) {
+    )
+        internal
+        returns (
+            uint256 collateralGainPerUnitStaked,
+            uint256 stableCoinLossPerUnitStaked
+        )
+    {
         /*
          * Compute the StableCoin and Collateral rewards. Uses a "feedback" error correction, to keep
          * the cumulative error in the P and S state variables low:
@@ -680,23 +821,35 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
          * 4) Store these errors for use in the next correction when this function is called.
          * 5) Note: static analysis tools complain about this "division before multiplication", however, it is intended.
          */
-        uint256 collateralNumerator = _collToAdd * DECIMAL_PRECISION + collateralToLastErrorOffset[_collateralTokenAddress];
+        uint256 collateralNumerator = _collToAdd *
+            DECIMAL_PRECISION +
+            collateralToLastErrorOffset[_collateralTokenAddress];
 
         assert(_debtToOffset <= _totalStableCoinDeposits);
         if (_debtToOffset == _totalStableCoinDeposits) {
             stableCoinLossPerUnitStaked = DECIMAL_PRECISION; // When the Pool depletes to 0, so does each deposit
             lastStableCoinLossErrorOffset = 0;
         } else {
-            uint256 stableCoinLossNumerator = _debtToOffset * DECIMAL_PRECISION - lastStableCoinLossErrorOffset;
+            uint256 stableCoinLossNumerator = _debtToOffset *
+                DECIMAL_PRECISION -
+                lastStableCoinLossErrorOffset;
             /*
              * Add 1 to make error in quotient positive. We want "slightly too much" StableCoin loss,
              * which ensures the error in any given compoundedStableCoinDeposit favors the Stability Pool.
              */
-            stableCoinLossPerUnitStaked = stableCoinLossNumerator / _totalStableCoinDeposits + 1;
-            lastStableCoinLossErrorOffset = stableCoinLossPerUnitStaked * _totalStableCoinDeposits - stableCoinLossNumerator;
+            stableCoinLossPerUnitStaked =
+                stableCoinLossNumerator /
+                _totalStableCoinDeposits +
+                1;
+            lastStableCoinLossErrorOffset =
+                stableCoinLossPerUnitStaked *
+                _totalStableCoinDeposits -
+                stableCoinLossNumerator;
         }
 
-        collateralGainPerUnitStaked = (_totalStableCoinDeposits != 0) ? collateralNumerator / _totalStableCoinDeposits : 0;
+        collateralGainPerUnitStaked = (_totalStableCoinDeposits != 0)
+            ? collateralNumerator / _totalStableCoinDeposits
+            : 0;
         collateralToLastErrorOffset[_collateralTokenAddress] =
             collateralNumerator -
             collateralGainPerUnitStaked *
@@ -714,12 +867,17 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
     function _issueA3ARewards() internal returns (uint256) {
         uint256 newA3ARewardTime = block.timestamp;
         uint256 totalA3ARewardsLeft_cached = totalA3ARewardsLeft;
-        if (totalA3ARewardsLeft_cached == 0 || a3aPerMinute == 0 || totalDeposit == 0) {
+        if (
+            totalA3ARewardsLeft_cached == 0 ||
+            a3aPerMinute == 0 ||
+            totalDeposit == 0
+        ) {
             latestA3ARewardTime = newA3ARewardTime;
             return 0;
         }
 
-        uint256 timePassedInMinutes = (newA3ARewardTime - latestA3ARewardTime) / SECONDS_IN_ONE_MINUTE;
+        uint256 timePassedInMinutes = (newA3ARewardTime - latestA3ARewardTime) /
+            SECONDS_IN_ONE_MINUTE;
         uint256 issuance = a3aPerMinute * timePassedInMinutes;
         if (totalA3ARewardsLeft_cached < issuance) {
             issuance = totalA3ARewardsLeft_cached; // event will capture that 0 tokens left
@@ -733,7 +891,10 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
         return issuance;
     }
 
-    function _computeA3APerUnitStaked(uint256 _a3aIssuance, uint256 _totalStableCoinDeposits) internal returns (uint256) {
+    function _computeA3APerUnitStaked(
+        uint256 _a3aIssuance,
+        uint256 _totalStableCoinDeposits
+    ) internal returns (uint256) {
         /*
          * Calculate the A3A-per-unit staked.  Division uses a "feedback" error correction, to keep the
          * cumulative error low in the running total G:
@@ -748,19 +909,28 @@ contract StabilityPool is Ownable, ReentrancyGuard, Constants {
         uint256 a3aNumerator = _a3aIssuance * DECIMAL_PRECISION + lastA3AError;
 
         uint256 a3aPerUnitStaked = a3aNumerator / _totalStableCoinDeposits;
-        lastA3AError = a3aNumerator - (a3aPerUnitStaked * _totalStableCoinDeposits);
+        lastA3AError =
+            a3aNumerator -
+            (a3aPerUnitStaked * _totalStableCoinDeposits);
 
         return a3aPerUnitStaked;
     }
 
     /// @dev transfers collateral rewards tokens precalculated to the depositor
-    function _sendCollateralRewardsToDepositor(TokenToUint256[] memory _depositorCollateralGains) internal {
+    function _sendCollateralRewardsToDepositor(
+        TokenToUint256[] memory _depositorCollateralGains
+    ) internal {
         for (uint256 i = 0; i < _depositorCollateralGains.length; i++) {
             if (_depositorCollateralGains[i].value == 0) {
                 continue;
             }
-            IERC20 collateralToken = IERC20(_depositorCollateralGains[i].tokenAddress);
-            collateralToken.safeTransfer(msg.sender, _depositorCollateralGains[i].value);
+            IERC20 collateralToken = IERC20(
+                _depositorCollateralGains[i].tokenAddress
+            );
+            collateralToken.safeTransfer(
+                msg.sender,
+                _depositorCollateralGains[i].value
+            );
             emit CollateralRewardRedeemed(
                 msg.sender,
                 _depositorCollateralGains[i].tokenAddress,

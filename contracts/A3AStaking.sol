@@ -1,23 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import '@openzeppelin/contracts/interfaces/IERC20Metadata.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
 
-import "./interfaces/IVaultFactory.sol";
-import "./interfaces/IFeeRecipient.sol";
-import "./interfaces/IVault.sol";
+import './interfaces/IVaultFactory.sol';
+import './interfaces/IFeeRecipient.sol';
+import './interfaces/IVault.sol';
 
-import "./utils/BONQMath.sol";
-import "./utils/constants.sol";
+import './utils/constants.sol';
 
 /**
  * @title A3A Staking contract.
  * @dev Rewards stakers in StableCoin that is used to pay fee.
  */
 contract A3AStaking is Ownable, Constants {
-    using BONQMath for uint256;
     using SafeERC20 for IERC20;
 
     // Mapping of stakers' addresses to their staked amount.
@@ -46,8 +44,16 @@ contract A3AStaking is Ownable, Constants {
     event StableCoinAddressSet(address _stableCoinAddress);
     event StakeChanged(address indexed _staker, uint256 _newStake);
     event TotalA3AStakedUpdated(uint256 _totalA3AStaked);
-    event RewardRedeemed(address _account, uint256 _stableAmount, address _vaultAddress);
-    event StakerSnapshotsUpdated(address _staker, uint256 _F_StableCoin, uint256 _stableGains);
+    event RewardRedeemed(
+        address _account,
+        uint256 _stableAmount,
+        address _vaultAddress
+    );
+    event StakerSnapshotsUpdated(
+        address _staker,
+        uint256 _F_StableCoin,
+        uint256 _stableGains
+    );
     event FeeTaken(uint256 _amount, uint256 _F_StableCoin, bool _redemptionFee);
 
     /**
@@ -93,11 +99,15 @@ contract A3AStaking is Ownable, Constants {
         uint256 currentStake = stakes[msg.sender];
 
         // Transfer A3A from caller to this contract.
-        require(a3aToken.transferFrom(msg.sender, address(this), _a3aAmount), "transfer-from-failed");
+        require(
+            a3aToken.transferFrom(msg.sender, address(this), _a3aAmount),
+            'transfer-from-failed'
+        );
 
         // Grab and record accumulated StableCoin gains from the current stake and update Snapshot.
         uint256 currentTotalA3AStaked = totalA3AStaked;
-        if (currentTotalA3AStaked == 0) stableCoinUserGains[msg.sender] += F_StableCoin;
+        if (currentTotalA3AStaked == 0)
+            stableCoinUserGains[msg.sender] += F_StableCoin;
         _updateUserSnapshot(msg.sender);
 
         // Increase user’s stake and total A3A staked.
@@ -124,8 +134,9 @@ contract A3AStaking is Ownable, Constants {
         // Grab and record accumulated StableCoin gains from the current stake and update Snapshot.
         _updateUserSnapshot(msg.sender);
 
-        uint256 A3AToWithdraw = _a3aAmount.min(currentStake);
-
+        uint256 A3AToWithdraw = _a3aAmount > currentStake
+            ? currentStake
+            : _a3aAmount;
         uint256 newStake = currentStake - A3AToWithdraw;
 
         // Decrease user's stake and total A3A staked.
@@ -150,7 +161,9 @@ contract A3AStaking is Ownable, Constants {
         uint256 totalA3AStaked_cached = totalA3AStaked;
         uint256 amountPerA3AStaked = _amount;
         if (totalA3AStaked_cached > 0) {
-            amountPerA3AStaked = ((_amount) * DECIMAL_PRECISION) / totalA3AStaked_cached;
+            amountPerA3AStaked =
+                ((_amount) * DECIMAL_PRECISION) /
+                totalA3AStaked_cached;
         }
         uint256 newF_StableCoin = F_StableCoin + amountPerA3AStaked;
         F_StableCoin = newF_StableCoin;
@@ -171,10 +184,13 @@ contract A3AStaking is Ownable, Constants {
     function redeemReward(uint256 _amount, address _vaultAddress) external {
         _requireNonZeroAmount(_amount);
         address account = msg.sender;
-        require(factory.containsVault(_vaultAddress), "vault-not-found");
+        require(factory.containsVault(_vaultAddress), 'vault-not-found');
         IVault _vault = IVault(_vaultAddress);
-        _amount = _vault.debt().min(_amount);
-        require((_getUnpaidStableCoinGain(msg.sender)) >= _amount, "amount-must-fit-rewards-amount");
+        _amount = _vault.debt() > _amount ? _amount : _vault.debt();
+        require(
+            (_getUnpaidStableCoinGain(msg.sender)) >= _amount,
+            'amount-must-fit-rewards-amount'
+        );
         _updateUserSnapshot(account);
         stableCoinUserGains[account] = stableCoinUserGains[account] - _amount;
         stableCoin.approve(address(factory), 0);
@@ -198,7 +214,9 @@ contract A3AStaking is Ownable, Constants {
      * @param _user Address of the user to check.
      * @return uint256 Unpaid rewards of the user in StableCoin.
      */
-    function getUnpaidStableCoinGain(address _user) external view returns (uint256) {
+    function getUnpaidStableCoinGain(
+        address _user
+    ) external view returns (uint256) {
         return _getUnpaidStableCoinGain(_user);
     }
 
@@ -217,9 +235,12 @@ contract A3AStaking is Ownable, Constants {
      * @param _user Address of the user to calculate gains for.
      * @return uint256 Pending StableCoin gains for the user.
      */
-    function _getPendingStableCoinGain(address _user) internal view returns (uint256) {
+    function _getPendingStableCoinGain(
+        address _user
+    ) internal view returns (uint256) {
         uint256 F_StableCoin_Snapshot = F_StableCoinSnapshots[_user];
-        uint256 stableCoinGain = (stakes[_user] * (F_StableCoin - F_StableCoin_Snapshot)) / DECIMAL_PRECISION;
+        uint256 stableCoinGain = (stakes[_user] *
+            (F_StableCoin - F_StableCoin_Snapshot)) / DECIMAL_PRECISION;
         return stableCoinGain;
     }
 
@@ -228,7 +249,9 @@ contract A3AStaking is Ownable, Constants {
      * @param _user Address of the user to calculate gains for.
      * @return uint256 Total unpaid StableCoin gains for the user.
      */
-    function _getUnpaidStableCoinGain(address _user) internal view returns (uint256) {
+    function _getUnpaidStableCoinGain(
+        address _user
+    ) internal view returns (uint256) {
         return stableCoinUserGains[_user] + _getPendingStableCoinGain(_user);
     }
 
@@ -240,7 +263,8 @@ contract A3AStaking is Ownable, Constants {
         uint256 userStake = stakes[_user];
         if (userStake > 0) {
             uint256 F_StableCoin_Snapshot = F_StableCoinSnapshots[_user];
-            uint256 stableCoinGain = (userStake * (F_StableCoin - F_StableCoin_Snapshot)) / DECIMAL_PRECISION;
+            uint256 stableCoinGain = (userStake *
+                (F_StableCoin - F_StableCoin_Snapshot)) / DECIMAL_PRECISION;
             stableCoinUserGains[_user] += stableCoinGain;
         }
     }
@@ -253,7 +277,11 @@ contract A3AStaking is Ownable, Constants {
         _recordStableCoinGain(_user);
         uint256 currentF_StableCoin = F_StableCoin;
         F_StableCoinSnapshots[_user] = currentF_StableCoin;
-        emit StakerSnapshotsUpdated(_user, currentF_StableCoin, stableCoinUserGains[_user]);
+        emit StakerSnapshotsUpdated(
+            _user,
+            currentF_StableCoin,
+            stableCoinUserGains[_user]
+        );
     }
 
     // --- 'require' functions ---
@@ -263,7 +291,7 @@ contract A3AStaking is Ownable, Constants {
      * @param currentStake Amount of current stake for the user.
      */
     function _requireUserHasStake(uint256 currentStake) internal pure {
-        require(currentStake > 0, "stakes-is-zero");
+        require(currentStake > 0, 'stakes-is-zero');
     }
 
     /**
@@ -271,6 +299,6 @@ contract A3AStaking is Ownable, Constants {
      * @param _amount Amount to check for non-zero.
      */
     function _requireNonZeroAmount(uint256 _amount) internal pure {
-        require(_amount > 0, "amount-is-zero");
+        require(_amount > 0, 'amount-is-zero');
     }
 }

@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
-import "./interfaces/IVault.sol";
-import "./interfaces/IVaultFactory.sol";
-import "./interfaces/IStabilityPool.sol";
-import "./interfaces/ILiquidationRouter.sol";
-import "./interfaces/ITokenPriceFeed.sol";
-import "./interfaces/IMintableToken.sol";
-import "./interfaces/ILastResortLiquidation.sol";
-import "./utils/constants.sol";
+import './interfaces/IVault.sol';
+import './interfaces/IVaultFactory.sol';
+import './interfaces/IStabilityPool.sol';
+import './interfaces/ILiquidationRouter.sol';
+import './interfaces/ITokenPriceFeed.sol';
+import './interfaces/IMintableToken.sol';
+import './interfaces/ILastResortLiquidation.sol';
+import './utils/constants.sol';
 
 /**
  * @title AuctionManager.
@@ -75,7 +75,7 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @param _auctionDuration Duration of the auction.
      */
     function setAuctionDuration(uint256 _auctionDuration) external onlyOwner {
-        require(_auctionDuration > 0, "auction-duration-is-0");
+        require(_auctionDuration > 0, 'auction-duration-is-0');
         auctionDuration = _auctionDuration;
         emit AuctionDurationUpdated(_auctionDuration);
     }
@@ -86,7 +86,7 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @param _lowestHF Lowest health factor allowed for bidding.
      */
     function setLowestHealthFactor(uint256 _lowestHF) external onlyOwner {
-        require(_lowestHF > 0, "lowest-hf-is-0");
+        require(_lowestHF > 0, 'lowest-hf-is-0');
         lowestHF = _lowestHF;
     }
 
@@ -95,7 +95,7 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @param _vaultFactory Address of the vault factory.
      */
     function setVaultFactory(address _vaultFactory) external onlyOwner {
-        require(_vaultFactory != address(0x0), "vault-factory-is-0");
+        require(_vaultFactory != address(0x0), 'vault-factory-is-0');
         vaultFactory = _vaultFactory;
         emit VaultFactoryUpdated(_vaultFactory);
     }
@@ -113,7 +113,9 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @param _auctionId The ID of the auction.
      * @return Auction data structure.
      */
-    function auctionInfo(uint256 _auctionId) external view returns (auctionData memory) {
+    function auctionInfo(
+        uint256 _auctionId
+    ) external view returns (auctionData memory) {
         return auctions[_auctionId];
     }
 
@@ -122,7 +124,7 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @param _vaultFactory Address of the vault factory.
      */
     constructor(address _vaultFactory) {
-        require(_vaultFactory != address(0x0), "vault-factory-is-0");
+        require(_vaultFactory != address(0x0), 'vault-factory-is-0');
         vaultFactory = _vaultFactory;
         emit VaultFactoryUpdated(_vaultFactory);
     }
@@ -132,15 +134,20 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @param _auctionId The ID of the auction.
      * @return Total collateral value.
      */
-    function getTotalCollateralValue(uint256 _auctionId) public view returns (uint256) {
+    function getTotalCollateralValue(
+        uint256 _auctionId
+    ) public view returns (uint256) {
         auctionData memory _auction = auctions[_auctionId];
-        ITokenPriceFeed _priceFeed = ITokenPriceFeed(IVaultFactory(vaultFactory).priceFeed());
+        ITokenPriceFeed _priceFeed = ITokenPriceFeed(
+            IVaultFactory(vaultFactory).priceFeed()
+        );
         uint256 _totalCollateralValue = 0;
         for (uint256 i = 0; i < _auction.collateralsLength; i++) {
             uint256 _price = _priceFeed.tokenPrice(_auction.collateral[i]);
             uint256 _normalizedCollateralAmount = _auction.collateralAmount[i] *
                 (10 ** (18 - _priceFeed.decimals(_auction.collateral[i])));
-            uint256 _collateralValue = (_normalizedCollateralAmount * _price) / DECIMAL_PRECISION;
+            uint256 _collateralValue = (_normalizedCollateralAmount * _price) /
+                DECIMAL_PRECISION;
             _totalCollateralValue += _collateralValue;
         }
         return _totalCollateralValue;
@@ -152,38 +159,52 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @notice Allows the liquidation router to initiate a new auction for the collateralized debt.
      */
     function newAuction() external {
-        ILiquidationRouter liquidationRouter = ILiquidationRouter(IVaultFactory(vaultFactory).liquidationRouter());
-        require(msg.sender == address(liquidationRouter), "not-allowed");
+        ILiquidationRouter liquidationRouter = ILiquidationRouter(
+            IVaultFactory(vaultFactory).liquidationRouter()
+        );
+        require(msg.sender == address(liquidationRouter), 'not-allowed');
 
         uint256 _debtToAuction = liquidationRouter.underWaterDebt();
-        require(_debtToAuction > 0, "no-debt-to-auction");
+        require(_debtToAuction > 0, 'no-debt-to-auction');
 
         address[] memory _collaterals = liquidationRouter.collaterals();
-        uint256[] memory _collateralAmounts = new uint256[](_collaterals.length);
+        uint256[] memory _collateralAmounts = new uint256[](
+            _collaterals.length
+        );
         uint256 _collateralsLength = _collaterals.length;
-        require(_collateralsLength > 0, "no-collaterals");
+        require(_collateralsLength > 0, 'no-collaterals');
 
         uint256 _totalCollateralValue = 0;
 
-        ITokenPriceFeed _priceFeed = ITokenPriceFeed(IVaultFactory(vaultFactory).priceFeed());
+        ITokenPriceFeed _priceFeed = ITokenPriceFeed(
+            IVaultFactory(vaultFactory).priceFeed()
+        );
 
         for (uint256 i = 0; i < _collateralsLength; i++) {
             IERC20 collateralToken = IERC20(_collaterals[i]);
-            uint256 _collateralAmount = liquidationRouter.collateral(_collaterals[i]);
-            collateralToken.safeTransferFrom(address(liquidationRouter), address(this), _collateralAmount);
+            uint256 _collateralAmount = liquidationRouter.collateral(
+                _collaterals[i]
+            );
+            collateralToken.safeTransferFrom(
+                address(liquidationRouter),
+                address(this),
+                _collateralAmount
+            );
             _collateralAmounts[i] = _collateralAmount;
 
             uint256 _price = _priceFeed.tokenPrice(address(collateralToken));
             uint256 _normalizedCollateralAmount = _collateralAmount *
                 (10 ** (18 - _priceFeed.decimals(address(collateralToken))));
-            uint256 _collateralValue = (_normalizedCollateralAmount * _price) / DECIMAL_PRECISION;
+            uint256 _collateralValue = (_normalizedCollateralAmount * _price) /
+                DECIMAL_PRECISION;
             _totalCollateralValue += _collateralValue;
         }
 
         uint256 _auctionStartTime = block.timestamp;
         uint256 _auctionEndTime = _auctionStartTime + auctionDuration;
 
-        uint256 _lowestDebtToAuction = (_totalCollateralValue * lowestHF) / DECIMAL_PRECISION;
+        uint256 _lowestDebtToAuction = (_totalCollateralValue * lowestHF) /
+            DECIMAL_PRECISION;
         uint256 _highestDebtToAuction = _debtToAuction;
 
         if (_highestDebtToAuction < _lowestDebtToAuction) {
@@ -227,9 +248,20 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      */
     function bidInfo(
         uint256 _auctionId
-    ) external view returns (uint256 _totalCollateralValue, uint256 _debtToAuctionAtCurrentTime) {
+    )
+        external
+        view
+        returns (
+            uint256 _totalCollateralValue,
+            uint256 _debtToAuctionAtCurrentTime
+        )
+    {
         auctionData memory _auction = auctions[_auctionId];
-        require(!_auction.auctionEnded && block.timestamp <= _auction.auctionEndTime, "auction-ended");
+        require(
+            !_auction.auctionEnded &&
+                block.timestamp <= _auction.auctionEndTime,
+            'auction-ended'
+        );
 
         _totalCollateralValue = getTotalCollateralValue(_auctionId);
         uint256 _highestDebtToAuction = _auction.highestDebtToAuction;
@@ -237,7 +269,8 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
         // decrease _debtToAuction linearly to _lowestDebtToAuction over the auction duration
         _debtToAuctionAtCurrentTime =
             _highestDebtToAuction -
-            ((_highestDebtToAuction - _lowestDebtToAuction) * (block.timestamp - _auction.auctionStartTime)) /
+            ((_highestDebtToAuction - _lowestDebtToAuction) *
+                (block.timestamp - _auction.auctionStartTime)) /
             auctionDuration;
     }
 
@@ -246,8 +279,12 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      * @param _auctionId The ID of the auction.
      */
     function _transferToLastResortLiquidation(uint256 _auctionId) internal {
-        ILiquidationRouter _liquidationRouter = ILiquidationRouter(IVaultFactory(vaultFactory).liquidationRouter());
-        ILastResortLiquidation _lastResortLiquidation = ILastResortLiquidation(_liquidationRouter.lastResortLiquidation());
+        ILiquidationRouter _liquidationRouter = ILiquidationRouter(
+            IVaultFactory(vaultFactory).liquidationRouter()
+        );
+        ILastResortLiquidation _lastResortLiquidation = ILastResortLiquidation(
+            _liquidationRouter.lastResortLiquidation()
+        );
 
         auctionData memory _auction = auctions[_auctionId];
         uint256 _collateralsLength = _auction.collateralsLength;
@@ -259,8 +296,14 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
         for (uint256 i = 0; i < _collateralsLength; i++) {
             IERC20 collateralToken = IERC20(_collaterals[i]);
             collateralToken.safeApprove(address(_lastResortLiquidation), 0);
-            collateralToken.safeApprove(address(_lastResortLiquidation), _collateralAmounts[i]);
-            _lastResortLiquidation.addCollateral(address(collateralToken), _collateralAmounts[i]);
+            collateralToken.safeApprove(
+                address(_lastResortLiquidation),
+                _collateralAmounts[i]
+            );
+            _lastResortLiquidation.addCollateral(
+                address(collateralToken),
+                _collateralAmounts[i]
+            );
         }
     }
 
@@ -272,7 +315,7 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
      */
     function bid(uint256 _auctionId) external nonReentrant {
         auctionData memory _auction = auctions[_auctionId];
-        require(!_auction.auctionEnded, "auction-ended");
+        require(!_auction.auctionEnded, 'auction-ended');
 
         if (block.timestamp > _auction.auctionEndTime) {
             // auction ended
@@ -287,21 +330,36 @@ contract AuctionManager is Ownable, ReentrancyGuard, Constants {
         uint256 _lowestDebtToAuction = _auction.lowestDebtToAuction;
         // decrease _debtToAuction linearly to _lowestDebtToAuction over the auction duration
         uint256 _debtToAuctionAtCurrentTime = _highestDebtToAuction -
-            ((_highestDebtToAuction - _lowestDebtToAuction) * (block.timestamp - _auction.auctionStartTime)) /
+            ((_highestDebtToAuction - _lowestDebtToAuction) *
+                (block.timestamp - _auction.auctionStartTime)) /
             auctionDuration;
 
-        IMintableToken _stable = IMintableToken(IVaultFactory(vaultFactory).stable());
-        _stable.safeTransferFrom(msg.sender, address(this), _debtToAuctionAtCurrentTime);
+        IMintableToken _stable = IMintableToken(
+            IVaultFactory(vaultFactory).stable()
+        );
+        _stable.safeTransferFrom(
+            msg.sender,
+            address(this),
+            _debtToAuctionAtCurrentTime
+        );
         _stable.burn(_debtToAuctionAtCurrentTime);
 
         uint256 _collateralsLength = _auction.collateralsLength;
 
         for (uint256 i = 0; i < _collateralsLength; i++) {
             IERC20 collateralToken = IERC20(_auction.collateral[i]);
-            collateralToken.safeTransfer(msg.sender, _auction.collateralAmount[i]);
+            collateralToken.safeTransfer(
+                msg.sender,
+                _auction.collateralAmount[i]
+            );
         }
 
         auctions[_auctionId].auctionEnded = true;
-        emit AuctionWon(_auctionId, msg.sender, _debtToAuctionAtCurrentTime, _totalCollateralValue);
+        emit AuctionWon(
+            _auctionId,
+            msg.sender,
+            _debtToAuctionAtCurrentTime,
+            _totalCollateralValue
+        );
     }
 }

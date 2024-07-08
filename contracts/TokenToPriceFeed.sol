@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
-import "./interfaces/IPriceFeed.sol";
-import "./utils/constants.sol";
-import "./interfaces/ITokenPriceFeed.sol";
+import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/interfaces/IERC20Metadata.sol';
+import './interfaces/IPriceFeed.sol';
+import './utils/constants.sol';
+import './interfaces/ITokenPriceFeed.sol';
 
 /**
  * @title TokenToPriceFeed
@@ -34,7 +34,9 @@ contract TokenToPriceFeed is Ownable, Constants, ITokenPriceFeed {
      * @dev Retrieves the price feed contract address for a given token.
      * @param  _token Address of the token.
      */
-    function tokenPriceFeed(address _token) public view override returns (address) {
+    function tokenPriceFeed(
+        address _token
+    ) public view override returns (address) {
         return tokens[_token].priceFeed;
     }
 
@@ -84,20 +86,23 @@ contract TokenToPriceFeed is Ownable, Constants, ITokenPriceFeed {
         address _priceFeed,
         uint256 _mcr,
         uint256 _mlr,
-        uint256 _borrowRate
+        uint256 _borrowRate,
+        uint256 /* _decimals */
     ) public override onlyOwner {
-        require(_mcr >= 100, "MCR < 100");
-        require(_mlr >= 100 && _mlr <= _mcr, "MLR < 100 or MLR > MCR");
-        require(_borrowRate < 10 ether, "borrowRate >= 10%");
+        require(_mcr >= 100, 'MCR < 100');
+        require(_mlr >= 100 && _mlr <= _mcr, 'MLR < 100 or MLR > MCR');
+        require(_borrowRate < 10 ether, 'borrowRate >= 10%');
         IERC20Metadata erc20 = IERC20Metadata(_token);
         uint256 _decimals = erc20.decimals();
-        require(_decimals > 0 || _decimals <= 18, "not-valid-decimals");
+        require(_decimals > 0 || _decimals <= 18, 'not-valid-decimals');
 
         TokenInfo memory token = tokens[_token];
         token.priceFeed = _priceFeed;
         token.mcr = (DECIMAL_PRECISION * _mcr) / 100;
         token.mlr = (DECIMAL_PRECISION * _mlr) / 100;
         token.borrowRate = _borrowRate;
+        token.decimals = _decimals;
+
         emit NewTokenPriceFeed(
             _token,
             _priceFeed,
@@ -115,7 +120,9 @@ contract TokenToPriceFeed is Ownable, Constants, ITokenPriceFeed {
      * @dev Transfers ownership after revoking other roles from other addresses.
      * @param _newOwner Address of the new owner.
      */
-    function transferOwnership(address _newOwner) public override(Ownable, IOwnable) {
+    function transferOwnership(
+        address _newOwner
+    ) public override(Ownable, IOwnable) {
         Ownable.transferOwnership(_newOwner);
     }
 }

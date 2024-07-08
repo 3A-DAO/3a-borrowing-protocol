@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.4;
 
-import "./ChainlinkPriceFeed.sol";
+import './ChainlinkPriceFeed.sol';
 
 /**
  * @title ConvertedPriceFeed
@@ -18,9 +18,19 @@ contract ConvertedPriceFeed is IPriceFeed, Constants {
      * @param _conversionPriceFeed The conversion price feed address.
      * @param _token The token address associated with the price feed.
      */
-    constructor(address _priceFeed, address _conversionPriceFeed, address _token) {
-        require(_priceFeed != address(0x0), "e2637b _priceFeed must not be address 0x0");
-        require(_conversionPriceFeed != address(0x0), "e2637b _conversionPriceFeed must not be address 0x0");
+    constructor(
+        address _priceFeed,
+        address _conversionPriceFeed,
+        address _token
+    ) {
+        require(
+            _priceFeed != address(0x0),
+            'e2637b _priceFeed must not be address 0x0'
+        );
+        require(
+            _conversionPriceFeed != address(0x0),
+            'e2637b _conversionPriceFeed must not be address 0x0'
+        );
         priceFeed = IPriceFeed(_priceFeed);
         conversionPriceFeed = IPriceFeed(_conversionPriceFeed);
         token = _token;
@@ -30,7 +40,9 @@ contract ConvertedPriceFeed is IPriceFeed, Constants {
      * @dev Retrieves the converted price by multiplying the primary price with the conversion price.
      */
     function price() public view override returns (uint256) {
-        return (priceFeed.price() * DECIMAL_PRECISION) / conversionPriceFeed.price();
+        return
+            (priceFeed.price() * DECIMAL_PRECISION) /
+            conversionPriceFeed.price();
     }
 
     /**

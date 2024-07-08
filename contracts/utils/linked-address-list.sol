@@ -27,10 +27,16 @@ library LinkedAddressList {
      * @param _before A boolean indicating whether to add the element before the reference.
      * @return A boolean indicating the success of the addition.
      */
-    function add(List storage _list, address _element, address _reference, bool _before) internal returns (bool) {
+    function add(
+        List storage _list,
+        address _element,
+        address _reference,
+        bool _before
+    ) internal returns (bool) {
         require(
-            _reference == address(0x0) || _list._values[_reference].next != address(0x0),
-            "79d3d _ref neither valid nor 0x"
+            _reference == address(0x0) ||
+                _list._values[_reference].next != address(0x0),
+            '79d3d _ref neither valid nor 0x'
         );
 
         // Element must not exist to be added
@@ -43,14 +49,20 @@ library LinkedAddressList {
                 _list._first = _element;
                 _list._last = _element;
             } else {
-                if (_before && (_reference == address(0x0) || _reference == _list._first)) {
+                if (
+                    _before &&
+                    (_reference == address(0x0) || _reference == _list._first)
+                ) {
                     // Adding the element as the first element
                     address first = _list._first;
                     _list._values[first].prev = _element;
                     element_values.prev = _element;
                     element_values.next = first;
                     _list._first = _element;
-                } else if (!_before && (_reference == address(0x0) || _reference == _list._last)) {
+                } else if (
+                    !_before &&
+                    (_reference == address(0x0) || _reference == _list._last)
+                ) {
                     // Adding the element as the last element
                     address last = _list._last;
                     _list._values[last].next = _element;
@@ -85,7 +97,10 @@ library LinkedAddressList {
      * @param _element The element to be removed.
      * @return A boolean indicating the success of the removal.
      */
-    function remove(List storage _list, address _element) internal returns (bool) {
+    function remove(
+        List storage _list,
+        address _element
+    ) internal returns (bool) {
         EntryLink memory element_values = _list._values[_element];
         if (element_values.next != address(0x0)) {
             if (_element == _list._last && _element == _list._first) {

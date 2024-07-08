@@ -2,13 +2,13 @@
 pragma solidity ^0.8.4;
 
 interface IPriceFeed {
-  function token() external view returns (address);
+    function token() external view returns (address);
 
-  function price() external view returns (uint256);
+    function price() external view returns (uint256);
 
-  function pricePoint() external view returns (uint256);
+    function pricePoint() external view returns (uint256);
 
-  function emitPriceSignal() external;
+    function emitPriceSignal() external;
 
-  event PriceUpdate(address token, uint256 price, uint256 average);
+    event PriceUpdate(address token, uint256 price, uint256 average);
 }

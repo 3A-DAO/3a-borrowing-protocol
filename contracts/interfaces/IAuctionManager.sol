@@ -2,5 +2,5 @@
 pragma solidity ^0.8.4;
 
 interface IAuctionManager {
-  function newAuction() external;
+    function newAuction() external;
 }

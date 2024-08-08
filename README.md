@@ -275,7 +275,7 @@ The `ConvertedPriceFeed` contract integrates two price feed contracts to convert
 
 The `PricesOrchestrator` contract integrates Pyth Network's real-time price data into EVM applications. It allows token owners to associate Ethereum tokens with corresponding Pyth Network price IDs and provides functions to update and retrieve token prices.
 
-- [Polygon](https://polygonscan.com/address/0xDFEeed605b30D801b19328b1a2053B7F64BaEdeE)
+- [Polygon](https://polygonscan.com/address/0x5db7d28DC820502739D7f8bedA42eD6C11746350)
 
 </details>
 

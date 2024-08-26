@@ -208,8 +208,8 @@ The `AuctionManager` smart contract facilitates auctions to liquidate debt again
 
 The `LastResortLiquidation` contract serves as a control mechanism for collateral and debt handling in liquidation scenarios. It manages various functionalities including collateral addition and withdrawal, tracks and handles bad debt, and allows permission-based distribution to designated vaults, ensuring controlled access and management of assets during liquidation events.
 
-- [Linea](https://lineascan.build/address/0x43Cf44ce70B6574f184719409E9cd130087f90C5)
-- [Polygon](https://polygonscan.com/address/0x65c6fd9b3a2a892096881e28f07c732ed128893e)
+- [Linea](https://lineascan.build/address/0x24691eddc5055696B85539648Fb54cCe5DB04c9C)
+- [Polygon](https://polygonscan.com/address/0xe6D25543bCEFc2Dd84699B3a877ec5Bf050731Dd)
 
 </details>
 

@@ -111,7 +111,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
         uint256 _amount
     ) external onlyAllowed {
         require(_collateral != address(0x0), 'collateral-is-0');
-        require(_amount > 0, 'amount-is-0');
+        // require(_amount > 0, 'amount-is-0');
 
         collateralSet.add(_collateral);
         IERC20(_collateral).safeTransferFrom(
@@ -135,7 +135,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
         address _to
     ) external onlyOwner {
         require(_collateral != address(0x0), 'collateral-is-0');
-        require(_amount > 0, 'amount-is-0');
+        // require(_amount > 0, 'amount-is-0');
 
         collateral[_collateral] -= _amount;
 
@@ -157,7 +157,7 @@ contract LastResortLiquidation is Ownable, ReentrancyGuard {
      * @dev Repays bad debt by burning stable tokens.
      * @param _amount The amount of stable tokens to burn.
      */
-    function repayBadDebt(uint256 _amount) external onlyOwner {
+    function repayBadDebt(uint256 _amount) external {
         require(_amount > 0, 'amount-is-0');
         require(_amount <= badDebt, 'amount-too-high');
 

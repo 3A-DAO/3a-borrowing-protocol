@@ -1,3 +1,4 @@
+import { loadPrivateKey } from './security/foundry-keystore.js';
 import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 import 'hardhat-gas-reporter';
@@ -43,11 +44,11 @@ const config: HardhatUserConfig = {
 		},
 		buildbear: {
 			url: `https://rpc.buildbear.io/${process.env.BUILDBEAR_NODE_ID}`,
-			accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+			accounts: loadPrivateKey('PRIVATE_KEY', false) !== undefined ? [loadPrivateKey('PRIVATE_KEY', false)] : [],
 		},
 		polygon: {
 			url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_POLYGON_API_KEY}`,
-			accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+			accounts: loadPrivateKey('PRIVATE_KEY', false) !== undefined ? [loadPrivateKey('PRIVATE_KEY', false)] : [],
 			gasPrice: 100000000000,
 		},
 	},

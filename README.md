@@ -1,3 +1,5 @@
+> Operational signing now uses encrypted Foundry keystores. Follow [KEYSTORE_MIGRATION.md](KEYSTORE_MIGRATION.md); older raw private key environment instructions below are superseded.
+
 <center><img src="3alogo.png" width="150" height="150" alt="" /></center>
 
 # 3A Borrowing Protocol
